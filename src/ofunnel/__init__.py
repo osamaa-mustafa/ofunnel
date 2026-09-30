@@ -10,7 +10,7 @@ value populations, fused into one score.
     assert check_complete(raw, node, fmt)        # gate: fail the run if it does not reconstruct
     code = by_key(node, "code") or by_value_shape(node, r"\\b\\d{4}-[A-Z]{2}\\d{2}\\b")
 """
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 from .adapters import ADAPTERS, capture, from_csv, from_html, from_json, from_text_kv, from_xml, sniff
 from .language import by_construct, collections, fields, normalize, records
@@ -23,7 +23,7 @@ from .pipeline import ExtractResult, Pipeline, extract
 from .profile import Profile, profile, signature, similarity, value_witness
 from .calibration import reliability
 from .require import (Match, Requirement, ResolveReport, as_bool, as_date, as_number, as_text, key_similarity,
-                      key_tokens, resolve, resolve_all)
+                      key_tokens, resolve, resolve_all, value_view)
 
 __all__ = ["Node", "NAMED", "INDEXED", "INFERRED", "SCALAR", "GROUP", "capture", "sniff", "ADAPTERS",
            "from_xml", "from_json", "from_csv", "from_text_kv", "from_html", "check_complete",
@@ -35,5 +35,5 @@ __all__ = ["Node", "NAMED", "INDEXED", "INFERRED", "SCALAR", "GROUP", "capture",
            "as_bool", "as_number", "as_date", "as_text", "key_similarity", "key_tokens",
            "funnel", "promote", "Proposal", "FunnelReport",
            "extract", "Pipeline", "ExtractResult",
-           "Profile", "profile", "signature", "similarity", "value_witness", "reliability",
+           "Profile", "profile", "signature", "similarity", "value_witness", "reliability", "value_view",
            "__version__"]

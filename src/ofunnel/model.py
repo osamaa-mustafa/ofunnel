@@ -10,8 +10,8 @@ Everything the world presents as information reduces to a recursive key -> value
 
 Leaves keep their raw content, so the tree is lossless; an inferred key is an annotation laid on top of
 the raw value, never a replacement for it. Every node may carry a provenance ``span`` back into the source.
-This is the one shape the format adapters (``universal.adapters``) all produce and the mapping layer
-(``universal.query``) all reads, so nothing downstream depends on the original format.
+This is the one shape the format adapters (``ofunnel.adapters``) all produce and the mapping layer
+(``ofunnel.query``) all reads, so nothing downstream depends on the original format.
 """
 from __future__ import annotations
 

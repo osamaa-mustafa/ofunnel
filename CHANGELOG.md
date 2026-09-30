@@ -4,6 +4,21 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2026-09-30
+
+### Fixed
+- Markup elements that carry their own text are now resolvable as values: XML/HTML *simple content*
+  (attributes plus text, e.g. `<PMID Version="1">41605291</PMID>`, `<ISSN IssnType="Electronic">...`) and
+  *mixed content* (text with inline markup, e.g. `<ArticleTitle>Effect of <i>X</i></ArticleTitle>`). Before,
+  such elements were captured correctly but a value requirement could not reach them, so fields like a PubMed
+  PMID, ISSN or DOI came back absent. Capture is unchanged and still lossless; the text is read through a view.
+  The scavenger and the funnel see these elements too.
+
+### Added
+- `value_view(node)`: the scalar content a node carries (a value's own value, or an element's text).
+- `benchmarks/`: scripts for every reported number (perturbation suite, hard scenarios, funnel gain, PubMed
+  real-world corpus, throughput, Valentine schema matching, SWDE probe).
+
 ## [0.1.0] - 2026-09-30
 
 Initial public release.

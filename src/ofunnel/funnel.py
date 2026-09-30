@@ -16,9 +16,9 @@ from collections import Counter
 from dataclasses import dataclass, field
 from typing import Iterable
 
-from .model import RECORD, SCALAR, Node
+from .model import RECORD, Node
 from .profile import value_witness
-from .require import VALUE_MISS, VALUE_OK, Requirement, key_similarity, resolve_all, _norm
+from .require import VALUE_MISS, VALUE_OK, Requirement, _raw, _vtype, key_similarity, resolve_all
 
 
 @dataclass
@@ -67,12 +67,13 @@ def _fit(leaf: Node, req: Requirement, record: Node | None, synonyms, is_absent:
     """Structural fit of a residue leaf to a requirement, WITHOUT the keys that already failed. 0 if a declared
     shape or type is contradicted (a hard gate); otherwise the strongest of shape / neighborhood / key-nearness,
     with small bonuses when signals agree or the requirement was absent from this document."""
-    if leaf.kind != SCALAR:
+    value = _raw(leaf, req)                # a VALUE's value, or the text of a text-bearing element
+    if value is None:
         return 0.0, {}
-    shape_hit = bool(req._shape and leaf.value and req._shape.search(leaf.value))
+    shape_hit = bool(req._shape and value and req._shape.search(value))
     if req._shape and not shape_hit:
         return 0.0, {}
-    if req.vtype and leaf.vtype not in req.vtype:
+    if req.vtype and _vtype(leaf) not in req.vtype:
         return 0.0, {}
     shape_c = 0.55 if shape_hit else 0.0
     nb_hit = False
@@ -83,7 +84,7 @@ def _fit(leaf: Node, req: Requirement, record: Node | None, synonyms, is_absent:
     nb_c = 0.55 if nb_hit else 0.0
     aliases = list(req.keys) + (list(synonyms.get(req.concept, ())) if (synonyms and req.concept) else [])
     lex = max((key_similarity(leaf.key, a) for a in aliases), default=0.0)
-    vw = value_witness(leaf.value, req._profile) if req._profile is not None else None
+    vw = value_witness(value, req._profile) if req._profile is not None else None
     if vw is not None and vw < VALUE_MISS:
         return 0.0, {}                     # the value population says this is a different field: hard gate
     val_c = 0.5 if (vw is not None and vw >= VALUE_OK) else 0.0
@@ -148,7 +149,7 @@ def funnel(trees: Iterable[Node], requirements: list[Requirement], *, synonyms: 
             if ev.get("lexical", 0) >= 0.4:
                 slot["ev"]["lexical>=.4"] += 1
             if len(slot["samples"]) < 5:
-                slot["samples"].append((leaf.value, leaf.origin))
+                slot["samples"].append((_raw(leaf, req), leaf.origin))
     proposals = []
     for (reqname, key), s in agg.items():
         support = len(s["confs"])

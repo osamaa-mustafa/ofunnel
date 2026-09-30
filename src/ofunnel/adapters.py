@@ -1,7 +1,7 @@
 """Format adapters: each turns one format family into the universal ``Node`` tree. This is the ONLY
 per-format code in the engine; everything after it is format-blind.
 
-Two guarantee classes (see ``universal.oracle``):
+Two guarantee classes (see ``ofunnel.oracle``):
 - Declared formats (xml, json, csv): the format states its own structure, so capture is lossless and
   the oracle is a reconstruction / canonical round-trip.
 - Implicit formats (text_kv): the format gives lines, not a tree, so every line (with its newline) is a

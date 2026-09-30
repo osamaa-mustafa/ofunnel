@@ -30,8 +30,17 @@ nothing:
 Because the source dialect is preserved in `origin`, the transcription is lossless: the original is recoverable,
 yet everything downstream reads only the five constructors.
 
-Formally the result is a typed, labeled, ordered regular tree language. That is what lets the completeness
-oracle be a decidable statement about two terms rather than a hope.
+Formally the result is a finite labeled, ordered tree over these five constructors, which is what lets the
+completeness oracle be a direct comparison of two trees rather than a hope.
+
+### Text-bearing elements
+
+Markup formats have elements that carry their own text without being leaves. *Simple content* is an element
+with attributes and text, such as `<PMID Version="1">41605291</PMID>`; *mixed content* is text with inline
+markup, such as `<ArticleTitle>Effect of <i>X</i> on Y</ArticleTitle>`. Capture keeps both losslessly as a RECORD
+with attribute and text children. `value_view(node)` returns the text such an element carries (concatenated in
+document order, attributes skipped), and every rung, the scavenger and the funnel read values through it, so a
+requirement for a value reaches these elements by key, path, shape or any other rung.
 
 ## The completeness oracle
 

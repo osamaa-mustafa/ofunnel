@@ -36,10 +36,11 @@ from difflib import SequenceMatcher
 from functools import lru_cache
 from typing import Any, Callable, Iterable
 
-from .model import ANNOTATION, INFERRED, NAMED, RECORD, SCALAR, TEXT, VALUE, Node
+from .model import ANNOTATION, GROUP, INFERRED, NAMED, RECORD, SCALAR, STRING, TEXT, VALUE, Node
 from .profile import Profile, profile as _profile_of, value_witness
 
 _PROSE_ORIGINS = ("xml.text", "text.line", "text.block", "html.text")
+_MARKUP_TEXT = ("xml.text", "html.text")         # element text in markup formats (not free text-file lines)
 
 # a fused candidate: (confidence, document order, Match)
 _Cand = tuple[float, int, "Match"]
@@ -299,6 +300,79 @@ def _walk_with_path(node: Node, path=()):
         yield from _walk_with_path(c, path + (node.key,))
 
 
+# ---- value-bearing elements -----------------------------------------------------------------------------
+# A VALUE leaf carries its value directly. Markup formats also have elements that carry their own text while
+# not being leaves: XML/HTML *simple content* (attributes + text, e.g. <id type="doi">10.1/x</id>) and *mixed
+# content* (text with inline markup, e.g. <title>Effect of <i>X</i> on Y</title>). Capture keeps these as a
+# RECORD with attribute and text children (lossless); resolution reads them as values through this view.
+def _own_text(n: Node) -> str | None:
+    """The text an element carries itself (simple or mixed content), concatenated in document order and
+    skipping attributes and annotations; None when the node is not a markup element with its own text."""
+    if n.kind != GROUP or n.construct != RECORD:
+        return None
+    if not any(c.construct == TEXT and c.origin in _MARKUP_TEXT for c in n.children):
+        return None
+    parts: list[str] = []
+
+    def collect(x: Node) -> None:
+        for c in x.children:
+            if c.role == "attribute" or c.construct == ANNOTATION:
+                continue
+            if c.kind == SCALAR:
+                parts.append(c.value or "")
+            else:
+                collect(c)
+
+    collect(n)
+    text = "".join(parts)
+    return text if text.strip() else None
+
+
+def value_view(n: Node) -> str | None:
+    """The scalar content a node carries: a VALUE's own value, or the text of a simple- or mixed-content
+    element. None for records and collections that carry no text of their own."""
+    return n.value if n.kind == SCALAR else _own_text(n)
+
+
+def _fits(n: Node, req: "Requirement") -> bool:
+    """Does node n have the sub-shape the requirement asks for? A text-bearing element counts as a VALUE."""
+    if n.construct == req.construct:
+        return True
+    return req.construct == VALUE and _own_text(n) is not None
+
+
+def _vtype(n: Node) -> str | None:
+    if n.kind == SCALAR:
+        return n.vtype
+    return STRING if _own_text(n) is not None else None
+
+
+def _raw(n: Node, req: "Requirement") -> str | None:
+    """The raw value a node offers to this requirement (text-bearing elements only when a VALUE is asked for)."""
+    if n.kind == SCALAR:
+        return n.value
+    return _own_text(n) if req.construct == VALUE else None
+
+
+def _value_nodes(tree: Node) -> list[Node]:
+    """Every value-bearing node in document order: VALUE leaves (not prose or annotations) and text-bearing
+    elements. This is what the residue is made of."""
+    out: list[Node] = []
+
+    def walk(n: Node) -> None:
+        if n.kind == SCALAR:
+            if n.construct not in (ANNOTATION, TEXT) and n.role != "text":
+                out.append(n)
+            return
+        if _own_text(n) is not None:
+            out.append(n)
+        for c in n.children:
+            walk(c)
+
+    walk(tree)
+    return out
+
+
 def _within_ok(req: Requirement, kp: tuple) -> bool:
     if not req._within:
         return True
@@ -310,23 +384,23 @@ def _within_ok(req: Requirement, kp: tuple) -> bool:
 
 
 def _value_of(req: Requirement, n: Node):
-    raw = n.value if n.kind == SCALAR else None
+    raw = _raw(n, req)
     shape_m = req._shape.search(raw) if (req._shape and raw) else None
     if req.extract and shape_m is not None:
         raw = shape_m.group(1) if shape_m.lastindex else shape_m.group(0)
-    value = req._norm(raw) if (req._norm and n.kind == SCALAR) else raw
+    value = req._norm(raw) if (req._norm and raw is not None) else raw
     return raw, value, shape_m is not None
 
 
 def _finish(req: Requirement, n: Node, conf: float, witnesses: tuple, raw, value, *, cap: float = FUSE_CAP) -> tuple[float, tuple]:
     """Apply the witnesses every rung shares: value profile (agree / contradict) and normalization failure."""
-    vw = value_witness(raw, req._profile) if (req._profile is not None and n.kind == SCALAR) else None
+    vw = value_witness(raw, req._profile) if (req._profile is not None and raw is not None) else None
     if vw is not None:
         if vw >= VALUE_OK:
             conf, witnesses = min(cap, conf + AGREE), witnesses + ("value",)
         elif vw < VALUE_MISS:
             conf, witnesses = conf * CONTRA, witnesses + ("value_miss",)
-    if req._norm and n.kind == SCALAR and value is None and raw:
+    if req._norm and value is None and raw:
         conf, witnesses = conf * 0.6, witnesses + ("unnormalized",)
     return round(conf, 3), witnesses
 
@@ -340,9 +414,9 @@ def _structural(tree: Node, req: Requirement, rej: Counter) -> list[_Cand]:
     shape_locates = not req._keys and not req._path and not req._neighbors and not req.concept
     for n, kp in _walk_with_path(tree):
         order += 1
-        if n.construct == ANNOTATION or n.construct != req.construct:
+        if n.construct == ANNOTATION or not _fits(n, req):
             continue
-        if req.vtype and n.vtype not in req.vtype:
+        if req.vtype and _vtype(n) not in req.vtype:
             rej["vtype"] += 1
             continue
         if not _within_ok(req, kp):
@@ -350,7 +424,8 @@ def _structural(tree: Node, req: Requirement, rej: Counter) -> list[_Cand]:
             continue
         key_ok = bool(req._keys) and _norm(kp[-1]) in req._keys
         path_ok = bool(req._path) and len(kp) >= len(req._path) and tuple(_norm(k) for k in kp[-len(req._path):]) == req._path
-        shape_m = req._shape.search(n.value) if (req._shape and n.kind == SCALAR and n.value) else None
+        text = _raw(n, req)
+        shape_m = req._shape.search(text) if (req._shape and text) else None
         shape_ok = shape_m is not None
         located = key_ok or path_ok or (shape_ok and shape_locates)
         if not located:
@@ -364,12 +439,12 @@ def _structural(tree: Node, req: Requirement, rej: Counter) -> list[_Cand]:
             method, conf = "shape", 0.7
         if len(witnesses) > 1:
             conf = min(0.99, conf + AGREE * (len(witnesses) - 1))
-        if req._shape and n.kind == SCALAR and n.value and not shape_ok:
+        if req._shape and text and not shape_ok:
             conf, witnesses = conf * CONTRA, witnesses + ("shape_miss",)          # located, but the declared shape disagrees
-        raw = n.value if n.kind == SCALAR else None
+        raw = text
         if req.extract and shape_m is not None:
             raw = shape_m.group(1) if shape_m.lastindex else shape_m.group(0)
-        value = req._norm(raw) if (req._norm and n.kind == SCALAR) else raw
+        value = req._norm(raw) if (req._norm and raw is not None) else raw
         conf, witnesses = _finish(req, n, conf, witnesses, raw, value, cap=0.99)
         cands.append((conf, order, Match(req.name, value, raw, method, conf, witnesses, n, kp, n.origin)))
     cands.sort(key=lambda t: (-t[0], t[1]))
@@ -462,7 +537,7 @@ def _synonym(tree: Node, req: Requirement, surface_terms, rej: Counter) -> list[
     order = 0
     for n, kp in _walk_with_path(tree):
         order += 1
-        if n.construct != req.construct or (req.vtype and n.vtype not in req.vtype):
+        if not _fits(n, req) or (req.vtype and _vtype(n) not in req.vtype):
             continue
         if not _within_ok(req, kp):
             continue
@@ -494,7 +569,7 @@ def _lexical(tree: Node, req: Requirement, rej: Counter) -> list[_Cand]:
     order = 0
     for n, kp in _walk_with_path(tree):
         order += 1
-        if n.construct != req.construct or (req.vtype and n.vtype not in req.vtype):
+        if not _fits(n, req) or (req.vtype and _vtype(n) not in req.vtype):
             continue
         if not _within_ok(req, kp):
             continue
@@ -539,9 +614,9 @@ def _neighborhood(tree: Node, req: Requirement, rej: Counter) -> list[_Cand]:
         neighbor_nodes = {id(c) for c in kids for nb in req._neighbors if key_similarity(c.key, nb) >= thr}
         fits = []
         for c in kids:
-            if id(c) in neighbor_nodes or c.construct != req.construct:
+            if id(c) in neighbor_nodes or not _fits(c, req):
                 continue
-            if req.vtype and c.vtype not in req.vtype:
+            if req.vtype and _vtype(c) not in req.vtype:
                 continue
             raw, value, shape_ok = _value_of(req, c)
             if req._shape and not shape_ok:
@@ -583,8 +658,7 @@ def resolve_all(tree: Node, requirements: Iterable[Requirement], *, synonyms: di
         else:
             rep.absent.append(req.name)
             rep.reasons[req.name] = ms[0].reason or "no_candidate"
-    rep.residue = [n for n in tree.leaves() if id(n) not in claimed and n.construct not in (ANNOTATION, TEXT)
-                   and not (n.role == "text")]
+    rep.residue = [n for n in _value_nodes(tree) if id(n) not in claimed]
     if scavenge:
         _scavenge(tree, rep, requirements)
     return rep
@@ -609,22 +683,22 @@ def _scavenge(tree: Node, rep: ResolveReport, requirements: list[Requirement]) -
         req = by_name.get(name)
         if req is None or req._shape is None:
             continue                                 # only shape-bearing fields can be scavenged by value
-        cands = [n for n in rep.residue if n.kind == SCALAR and n.value and req._shape.search(n.value)
-                 and (not req.vtype or n.vtype in req.vtype)]
+        cands = [n for n in rep.residue if _raw(n, req) and req._shape.search(_raw(n, req))
+                 and (not req.vtype or _vtype(n) in req.vtype)]
         if not cands:
             continue
         if len(cands) == 1:
             n, conf, witnesses = cands[0], 0.4, ("scavenge", "shape")
         else:
             # several shaped values: rank by the witnesses that can separate them (value profile, neighborhood);
-            # lexical nearness is deliberately NOT used here -- a decoy like RELATED_RIN is lexically closest
+            # lexical nearness is deliberately NOT used here -- a decoy like RELATED_ID is lexically closest
             if parents is None:
                 parents = _record_of(tree)
             thr = req.fuzzy if req.fuzzy is not None else 1.0
             scored = []
             for c in cands:
                 s = 0.0
-                vw = value_witness(c.value, req._profile) if req._profile is not None else None
+                vw = value_witness(_raw(c, req), req._profile) if req._profile is not None else None
                 if vw is not None:
                     s += vw
                 rec = parents.get(id(c))

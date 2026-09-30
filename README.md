@@ -92,6 +92,11 @@ Classification is additive: it sets `construct`, `origin` (the source dialect, f
 and `vtype`, and never removes a node. The source dialect stays recoverable, yet everything downstream can
 ignore it.
 
+Markup elements that carry their own text are values too. An element with attributes and text
+(`<PMID Version="1">41605291</PMID>`, XML "simple content") or text with inline markup
+(`<ArticleTitle>Effect of <i>X</i></ArticleTitle>`, "mixed content") is captured losslessly as a record with
+attribute and text children, and resolution reads its text through `value_view(node)`.
+
 ![Lossless capture](docs/img/capture.png)
 
 Every capture is gated by a **completeness oracle**. For declared formats (XML, JSON, CSV) it independently
@@ -192,6 +197,23 @@ your own labelled data. It never lifts a contradicted or ambiguous match.
 
 ---
 
+## Results
+
+On **34,989 real PubMed records** (public NLM baseline), six fields (PMID, title, ISSN, language, publication
+year, DOI), scored against an exact-path parser written for the schema:
+
+| | pristine | after a five-element schema rename |
+|---|---:|---:|
+| hand-written tag regexes | F1 1.000 | F1 0.199 |
+| O-Funnel (same requirements) | F1 1.000 | F1 1.000 |
+
+Every capture passed the completeness oracle, pristine and drifted. On constructed suites that isolate the
+failure modes of byte-level extraction, O-Funnel raises F1 from 0.43 to 1.00 (120 hard scenarios) and from 0.80
+to 0.94 after self-improvement (117 perturbations). Every number is reproducible with the scripts in
+[`benchmarks/`](benchmarks/).
+
+---
+
 ## Examples
 
 See the [`examples/`](examples/) directory:
@@ -216,7 +238,7 @@ from ofunnel import (
     Requirement, Match, ResolveReport, resolve, resolve_all,
     extract, ExtractResult, Pipeline,
     # value profiles + calibration
-    profile, similarity, value_witness, signature, reliability,
+    profile, similarity, value_witness, signature, reliability, value_view,
     # funnel
     funnel, promote, Proposal, FunnelReport,
     # value normalizers + key similarity

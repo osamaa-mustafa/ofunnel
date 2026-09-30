@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ofunnel"
-version = "0.1.0"
+version = "0.1.1"
 description = "Lossless structural capture and drift-robust, requirement-driven extraction from heterogeneous documents (XML, JSON, CSV, HTML, key-value text). Pure standard library, zero dependencies."
 readme = "README.md"
 requires-python = ">=3.9"
