@@ -24,6 +24,12 @@ keywords = [
     "etl",
     "parsing",
     "provenance",
+    "regex",
+    "regex-alternative",
+    "data-extraction",
+    "field-extraction",
+    "web-scraping",
+    "data-quality",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",

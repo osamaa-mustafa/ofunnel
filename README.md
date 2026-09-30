@@ -2,6 +2,15 @@
 
 **Lossless structural capture, then drift-robust, requirement-driven extraction from heterogeneous documents.**
 
+[![PyPI](https://img.shields.io/pypi/v/ofunnel.svg)](https://pypi.org/project/ofunnel/)
+[![Python](https://img.shields.io/pypi/pyversions/ofunnel.svg)](https://pypi.org/project/ofunnel/)
+[![CI](https://github.com/osamaa-mustafa/ofunnel/actions/workflows/ci.yml/badge.svg)](https://github.com/osamaa-mustafa/ofunnel/actions/workflows/ci.yml)
+
+**Tired of regexes that break when a key is renamed or a date changes format?** O-Funnel is a regex
+alternative for data extraction: declare the fields you need once, and it finds them in XML, JSON, CSV, HTML or
+key-value text even after the schema drifts, verifies nothing was lost, and tells you why a field is missing
+instead of silently returning the wrong value.
+
 O-Funnel pulls a fixed set of fields out of documents that arrive in many formats (XML, JSON, CSV, HTML, and
 plain key-value text) and under many, drifting schemas, without the brittleness of hand-written byte regexes.
 It is pure Python standard library, has zero dependencies, is fully typed, and is deterministic.
