@@ -1,0 +1,59 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ofunnel"
+version = "0.1.0"
+description = "Lossless structural capture and drift-robust, requirement-driven extraction from heterogeneous documents (XML, JSON, CSV, HTML, key-value text). Pure standard library, zero dependencies."
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Osama Mustafa" }]
+keywords = [
+    "information-extraction",
+    "semi-structured-data",
+    "schema-matching",
+    "schema-drift",
+    "data-integration",
+    "xml",
+    "json",
+    "csv",
+    "html",
+    "etl",
+    "parsing",
+    "provenance",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Text Processing :: Markup",
+    "Typing :: Typed",
+]
+dependencies = []
+
+[project.optional-dependencies]
+test = ["pytest>=7"]
+
+[project.urls]
+Homepage = "https://github.com/osamaa-mustafa/ofunnel"
+Repository = "https://github.com/osamaa-mustafa/ofunnel"
+Issues = "https://github.com/osamaa-mustafa/ofunnel/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+ofunnel = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
