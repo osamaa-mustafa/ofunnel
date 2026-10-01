@@ -5,6 +5,7 @@
 [![PyPI](https://img.shields.io/pypi/v/ofunnel.svg)](https://pypi.org/project/ofunnel/)
 [![Python](https://img.shields.io/pypi/pyversions/ofunnel.svg)](https://pypi.org/project/ofunnel/)
 [![CI](https://github.com/osamaa-mustafa/ofunnel/actions/workflows/ci.yml/badge.svg)](https://github.com/osamaa-mustafa/ofunnel/actions/workflows/ci.yml)
+[![arXiv](https://img.shields.io/badge/arXiv-2609.39209-b31b1b.svg)](https://arxiv.org/abs/2609.39209)
 
 **Tired of regexes that break when a key is renamed or a date changes format?** O-Funnel is a regex
 alternative for data extraction: declare the fields you need once, and it finds them in XML, JSON, CSV, HTML or
@@ -288,6 +289,26 @@ pytest
 ```
 
 Contributions are welcome. Please keep the library dependency-free and add a test for any new behavior.
+
+---
+
+## Citation
+
+The method and its evaluation are described in the paper
+[O-Funnel: Lossless Structural Capture and Requirement-Driven Extraction from Drifting, Heterogeneous Documents](https://arxiv.org/abs/2609.39209).
+If you use O-Funnel in your work, please cite:
+
+```bibtex
+@misc{mustafa2026ofunnel,
+  title         = {O-Funnel: Lossless Structural Capture and Requirement-Driven Extraction from Drifting, Heterogeneous Documents},
+  author        = {Mustafa, Osama},
+  year          = {2026},
+  eprint        = {2609.39209},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.DB},
+  url           = {https://arxiv.org/abs/2609.39209}
+}
+```
 
 ---
 
