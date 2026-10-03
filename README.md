@@ -7,6 +7,8 @@
 [![CI](https://github.com/osamaa-mustafa/ofunnel/actions/workflows/ci.yml/badge.svg)](https://github.com/osamaa-mustafa/ofunnel/actions/workflows/ci.yml)
 [![arXiv](https://img.shields.io/badge/arXiv-2609.39209-b31b1b.svg)](https://arxiv.org/abs/2609.39209)
 
+https://github.com/user-attachments/assets/fbe09064-ea51-4f60-a5c1-acb47e9e39f8
+
 **Tired of regexes that break when a key is renamed or a date changes format?** O-Funnel is a regex
 alternative for data extraction: declare the fields you need once, and it finds them in XML, JSON, CSV, HTML or
 key-value text even after the schema drifts, verifies nothing was lost, and tells you why a field is missing
